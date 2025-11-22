@@ -337,6 +337,136 @@ def meta_filter(metas: dict, filters: list[dict]):
     return list(doc_ids)
 
 
+def _normalize_similarity_score(score) -> float:
+    """Safely cast similarity-like values to float."""
+
+    try:
+        return float(score)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _select_pdf_document_by_similarity(chunks: list[dict], max_candidates: int = 8):
+    """Pick the PDF document whose top chunks provide the strongest overall similarity signal."""
+
+    doc_stats = {}
+    for ck in chunks[:max_candidates]:
+        doc_id = ck.get("doc_id") or ck.get("document_id")
+        if not doc_id:
+            continue
+
+        doc_type = (ck.get("doc_type_kwd") or ck.get("doc_type") or "").lower()
+        if doc_type and doc_type != "pdf":
+            continue
+
+        sim = _normalize_similarity_score(ck.get("similarity"))
+        if doc_id not in doc_stats:
+            doc_stats[doc_id] = {
+                "doc_id": doc_id,
+                "doc_name": ck.get("docnm_kwd") or ck.get("document_name", ""),
+                "count": 0,
+                "similarity_sum": 0.0,
+                "best_similarity": 0.0,
+            }
+
+        doc_stats[doc_id]["count"] += 1
+        doc_stats[doc_id]["similarity_sum"] += sim
+        doc_stats[doc_id]["best_similarity"] = max(doc_stats[doc_id]["best_similarity"], sim)
+
+    if not doc_stats:
+        return None
+
+    ranked_docs = sorted(
+        doc_stats.values(),
+        key=lambda x: (x["similarity_sum"], x["count"], x["best_similarity"]),
+        reverse=True,
+    )
+    return ranked_docs[0]
+
+
+def _mark_selected_doc(kbinfos: dict, doc_meta: dict, kb_id: str):
+    """Annotate the reference payload so the UI can highlight the chosen document."""
+
+    doc_aggs = kbinfos.get("doc_aggs") or []
+    matched = False
+    for agg in doc_aggs:
+        if agg.get("doc_id") == doc_meta["doc_id"]:
+            agg["selected"] = True
+            agg["similarity_sum"] = doc_meta.get("similarity_sum", 0.0)
+            agg["best_similarity"] = doc_meta.get("best_similarity", 0.0)
+            matched = True
+            break
+
+    if not matched:
+        doc_aggs.insert(
+            0,
+            {
+                "doc_id": doc_meta["doc_id"],
+                "doc_name": doc_meta.get("doc_name", ""),
+                "count": doc_meta.get("count", 0),
+                "similarity_sum": doc_meta.get("similarity_sum", 0.0),
+                "best_similarity": doc_meta.get("best_similarity", 0.0),
+                "kb_id": kb_id,
+                "selected": True,
+            },
+        )
+
+    kbinfos["doc_aggs"] = doc_aggs
+
+
+def _append_full_pdf(retriever, doc_meta: dict, kbinfos: dict):
+    """Fetch the full PDF content and prepend it as a synthetic chunk for LLM consumption."""
+
+    doc_id = doc_meta.get("doc_id")
+    if not doc_id:
+        return
+
+    tenant_id = DocumentService.get_tenant_id(doc_id)
+    kb_id = DocumentService.get_knowledgebase_id(doc_id)
+    if not tenant_id or not kb_id:
+        return
+
+    e, doc = DocumentService.get_by_id(doc_id)
+    if not e:
+        return
+
+    doc_meta["doc_name"] = doc_meta.get("doc_name") or doc.name
+
+    full_pdf_chunks = retriever.chunk_list(doc_id, tenant_id, [str(kb_id)], sort_by_position=True)
+    if not full_pdf_chunks:
+        return
+
+    full_content = "\n".join([c.get("content_with_weight", "") for c in full_pdf_chunks if c.get("content_with_weight")])
+    if not full_content.strip():
+        return
+
+    reference_vector = []
+    if kbinfos.get("chunks"):
+        reference_vector = kbinfos["chunks"][0].get("vector", [])
+
+    synthetic_chunk = {
+        "chunk_id": f"{doc_id}__full_content",
+        "content_ltks": full_content,
+        "content_with_weight": full_content,
+        "doc_id": doc_id,
+        "docnm_kwd": doc_meta.get("doc_name", ""),
+        "kb_id": kb_id,
+        "important_kwd": [],
+        "image_id": "",
+        "similarity": doc_meta.get("similarity_sum", 0.0),
+        "vector_similarity": doc_meta.get("similarity_sum", 0.0),
+        "term_similarity": doc_meta.get("best_similarity", 0.0),
+        "positions": [],
+        "doc_type_kwd": "pdf",
+        "vector": [0.0 for _ in reference_vector] if reference_vector else [],
+        "selected_doc": True,
+    }
+
+    kbinfos.setdefault("chunks", [])
+    kbinfos["chunks"].insert(0, synthetic_chunk)
+    _mark_selected_doc(kbinfos, doc_meta, kb_id)
+
+
 def chat(dialog, messages, stream=True, **kwargs):
     assert messages[-1]["role"] == "user", "The last content of this conversation is not from user."
     if not dialog.kb_ids and not dialog.prompt_config.get("tavily_api_key"):
@@ -482,6 +612,10 @@ def chat(dialog, messages, stream=True, **kwargs):
                                                        LLMBundle(dialog.tenant_id, LLMType.CHAT))
                 if ck["content_with_weight"]:
                     kbinfos["chunks"].insert(0, ck)
+
+            top_pdf_doc = _select_pdf_document_by_similarity(kbinfos.get("chunks", []))
+            if top_pdf_doc:
+                _append_full_pdf(retriever, top_pdf_doc, kbinfos)
 
             knowledges = kb_prompt(kbinfos, max_tokens)
 
