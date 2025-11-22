@@ -559,7 +559,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       emptyResponseTip: `Set this as a response if no results are retrieved from the knowledge bases for your query, or leave this field blank to allow the LLM to improvise when nothing is found.`,
       emptyResponseMessage: `Empty response will be triggered when nothing relevant is retrieved from knowledge bases. You must clear the 'Empty response' field if no knowledge base is selected.`,
       setAnOpener: 'Opening greeting',
-      setAnOpenerInitial: `Hi! I'm your assistant. What can I do for you?`,
+      setAnOpenerInitial: `Hi! I'm TDRA QnA assistant developed by 6G Research Center at Khalifa University. What can I do for you?`,
       setAnOpenerTip: 'Set an opening greeting for users.',
       knowledgeBases: 'Datasets',
       knowledgeBasesMessage: 'Please select',

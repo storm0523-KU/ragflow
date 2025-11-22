@@ -24,7 +24,7 @@ class BeginParam(UserFillUpParam):
     def __init__(self):
         super().__init__()
         self.mode = "conversational"
-        self.prologue = "Hi! I'm your smart assistant. What can I do for you?"
+        self.prologue = "Hi! I'm TDRA QnA assistant developed by 6G Research Center at Khalifa University,. What can I do for you?"
 
     def check(self):
         self.check_valid_value(self.mode, "The 'mode' should be either `conversational` or `task`", ["conversational", "task"])

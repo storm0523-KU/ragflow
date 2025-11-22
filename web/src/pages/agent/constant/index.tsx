@@ -110,7 +110,7 @@ export const initialRetrievalValues = {
 
 export const initialBeginValues = {
   mode: AgentDialogueMode.Conversational,
-  prologue: `Hi! I'm your assistant. What can I do for you?`,
+  prologue: `Hi! I'm TDRA QnA assistant developed by 6G Research Center at Khalifa University,. What can I do for you?`,
 };
 
 export const initialRewriteQuestionValues = {

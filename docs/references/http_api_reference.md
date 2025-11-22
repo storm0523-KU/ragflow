@@ -2274,7 +2274,7 @@ curl --request POST \
   - `"rerank_model"`: `string` If it is not specified, vector cosine similarity will be used; otherwise, reranking score will be used.
   - `top_k`: `int` Refers to the process of reordering or selecting the top-k items from a list or set based on a specific ranking criterion. Default to 1024.
   - `"empty_response"`: `string` If nothing is retrieved in the dataset for the user's question, this will be used as the response. To allow the LLM to improvise when nothing is found, leave this blank.
-  - `"opener"`: `string` The opening greeting for the user. Defaults to `"Hi! I am your assistant, can I help you?"`.
+  - `"opener"`: `string` The opening greeting for the user. Defaults to `"Hi! I am TDRA QnA assistant developed by 6G Research Center at Khalifa University, can I help you?"`.
   - `"show_quote`: `boolean` Indicates whether the source of text should be displayed. Defaults to `true`.
   - `"prompt"`: `string` The prompt content.
 
@@ -2406,7 +2406,7 @@ curl --request PUT \
     - The default value is `[{"key": "knowledge", "optional": true}]`
   - `"rerank_model"`: `string` If it is not specified, vector cosine similarity will be used; otherwise, reranking score will be used.
   - `"empty_response"`: `string` If nothing is retrieved in the dataset for the user's question, this will be used as the response. To allow the LLM to improvise when nothing is found, leave this blank.
-  - `"opener"`: `string` The opening greeting for the user. Defaults to `"Hi! I am your assistant, can I help you?"`.
+  - `"opener"`: `string` The opening greeting for the user. Defaults to `"Hi! I am TDRA QnA assistant developed by 6G Research Center at Khalifa University, can I help you"`.
   - `"show_quote`: `boolean` Indicates whether the source of text should be displayed. Defaults to `true`.
   - `"prompt"`: `string` The prompt content.
 
@@ -2643,7 +2643,7 @@ Success:
         "id": "4606b4ec87ad11efbc4f0242ac120006",
         "messages": [
             {
-                "content": "Hi! I am your assistant, can I help you?",
+                "content": "Hi! I am TDRA QnA assistant developed by 6G Research Center at Khalifa University, can I help you",
                 "role": "assistant"
             }
         ],
@@ -2784,7 +2784,7 @@ Success:
             "id": "578d541e87ad11ef96b90242ac120006",
             "messages": [
                 {
-                    "content": "Hi! I am your assistant, can I help you?",
+                    "content": "Hi! I am TDRA QnA assistant developed by 6G Research Center at Khalifa University, can I help you",
                     "role": "assistant"
                 }
             ],
