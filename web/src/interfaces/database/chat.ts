@@ -142,6 +142,9 @@ export interface Docagg {
   count: number;
   doc_id: string;
   doc_name: string;
+  similarity_sum?: number;
+  best_similarity?: number;
+  selected?: boolean;
   url?: string;
 }
 

@@ -419,8 +419,13 @@ class Dealer:
             if len(ranks["chunks"]) >= page_size:
                 if aggs:
                     if dnm not in ranks["doc_aggs"]:
-                        ranks["doc_aggs"][dnm] = {"doc_id": did, "count": 0}
+                        ranks["doc_aggs"][dnm] = {"doc_id": did, "count": 0, "similarity_sum": 0.0,
+                                                     "best_similarity": 0.0, "doc_type": chunk.get("doc_type_kwd", "")}
                     ranks["doc_aggs"][dnm]["count"] += 1
+                    ranks["doc_aggs"][dnm]["similarity_sum"] += float(sim[i])
+                    ranks["doc_aggs"][dnm]["best_similarity"] = max(
+                        ranks["doc_aggs"][dnm]["best_similarity"], float(sim[i])
+                    )
                     continue
                 break
 
@@ -448,13 +453,27 @@ class Dealer:
                     d["highlight"] = d["content_with_weight"]
             ranks["chunks"].append(d)
             if dnm not in ranks["doc_aggs"]:
-                ranks["doc_aggs"][dnm] = {"doc_id": did, "count": 0}
+                ranks["doc_aggs"][dnm] = {"doc_id": did, "count": 0, "similarity_sum": 0.0,
+                                             "best_similarity": 0.0, "doc_type": chunk.get("doc_type_kwd", "")}
             ranks["doc_aggs"][dnm]["count"] += 1
+            ranks["doc_aggs"][dnm]["similarity_sum"] += float(sim[i])
+            ranks["doc_aggs"][dnm]["best_similarity"] = max(ranks["doc_aggs"][dnm]["best_similarity"], float(sim[i]))
         ranks["doc_aggs"] = [{"doc_name": k,
                               "doc_id": v["doc_id"],
-                              "count": v["count"]} for k,
-                                                       v in sorted(ranks["doc_aggs"].items(),
-                                                                   key=lambda x: x[1]["count"] * -1)]
+                              "count": v["count"],
+                              "similarity_sum": v.get("similarity_sum", 0.0),
+                              "best_similarity": v.get("best_similarity", 0.0),
+                              "doc_type": v.get("doc_type", "")
+                              } for k,
+                                                       v in sorted(
+                                                           ranks["doc_aggs"].items(),
+                                                           key=lambda x: (
+                                                               x[1].get("similarity_sum", 0.0),
+                                                               x[1].get("count", 0),
+                                                               x[1].get("best_similarity", 0.0),
+                                                           ),
+                                                           reverse=True,
+                                                       )]
         ranks["chunks"] = ranks["chunks"][:page_size]
 
         return ranks
