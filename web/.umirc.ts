@@ -22,10 +22,6 @@ export default defineConfig({
   history: {
     type: 'browser',
   },
-  devServer: {
-    host: process.env.DEV_SERVER_HOST || '0.0.0.0',
-    port: Number(process.env.DEV_SERVER_PORT || 8000),
-  },
   plugins: [
     '@react-dev-inspector/umi4-plugin',
     '@umijs/plugins/dist/tailwindcss',
